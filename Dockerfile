@@ -1,32 +1,27 @@
-# Usamos la imagen oficial de PHP con Apache y versión 8.1
 FROM php:8.1-apache
 
-# Instalamos extensiones necesarias y utilidades
+# Instalar dependencias para php y composer
 RUN apt-get update && apt-get install -y \
     libzip-dev zip unzip git curl \
     && docker-php-ext-install pdo pdo_mysql zip
 
-# Instala Composer manualmente
+# Instalar Composer globalmente
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copiamos solo archivos de dependencias primero (para usar cache si no cambian)
-COPY composer.json composer.lock /var/www/html/
-
-# Instalamos dependencias de PHP
-RUN cd /var/www/html && composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Copiamos el resto del proyecto
-COPY . /var/www/html/
-
-# Habilitamos mod_rewrite de Apache para rutas amigables
+# Habilitar mod_rewrite de Apache
 RUN a2enmod rewrite
 
-# Cambiamos permisos para que Apache pueda acceder a los archivos
+# Copiar todo el código al contenedor
+COPY . /var/www/html/
+
+# Ejecutar composer install dentro del directorio del proyecto
+RUN cd /var/www/html && composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# Cambiar permisos para apache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage
 
-# Exponemos el puerto 80 para acceder vía navegador
+# Exponer puerto 80
 EXPOSE 80
 
-# Comando para arrancar Apache en primer plano
 CMD ["apache2-foreground"]
